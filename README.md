@@ -1,8 +1,6 @@
-# Claude NIM Bridge / Claude NIM 桥接服务
+# Claude NIM Bridge
 
 > Use NVIDIA's free NIM API (40 req/min) as a drop-in replacement for Anthropic API with Claude Code
->
-> 使用 NVIDIA 的免费 NIM API（40 请求/分钟）替代 Anthropic API 运行 Claude Code
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
@@ -10,66 +8,65 @@
 
 ---
 
-## Features / 功能特性 | [中文](#中文文档)
+## Features
 
-| Feature / 功能 | Description / 说明 |
-|----------------|-------------------|
-| 🚀 **Free API / 免费 API** | Use NVIDIA NIM free tier (40 req/min) / 使用 NVIDIA NIM 免费套餐（40 请求/分钟）|
-| 🔄 **API Proxy / API 代理** | Translation from Anthropic API format to NVIDIA NIM format / 将 Anthropic API 请求转换为 NVIDIA NIM 格式 |
-| ⚡ **Streaming Support / 流式支持** | Full support for Anthropic-style streaming responses / 完整支持 Anthropic 格式的流式响应 |
-| 🎯 **Reasoning Models / 推理模型** | Support for thinking/reasoning model outputs / 支持带思维链输出的推理模型 |
-| 🛡️ **Smart Optimization / 优化处理** | Intelligent skipping of quota checks and title generation requests / 智能跳过配额检查和标题生成请求 |
-| 📦 **Lightweight / 精简设计** | Pure proxy mode, minimal dependencies / 纯代理模式，极简依赖 |
+| Feature | Description |
+|---------|-------------|
+| 🚀 **Free API** | Use NVIDIA NIM free tier (40 req/min) |
+| 🔄 **API Proxy** | Translation from Anthropic API format to NVIDIA NIM format |
+| ⚡ **Streaming Support** | Full support for Anthropic-style streaming responses |
+| 🎯 **Reasoning Models** | Support for thinking/reasoning model outputs |
+| 🛡️ **Smart Optimization** | Intelligent skipping of quota checks and title generation requests |
+| 📦 **Lightweight** | Pure proxy mode, minimal dependencies |
 
 ---
 
-## Quick Start / 快速开始
+## Quick Start
 
-### 1. Get NVIDIA API Key / 获取 NVIDIA API 密钥
+### 1. Get NVIDIA API Key
 
-Visit / 访问 [build.nvidia.com/settings/api-keys](https://build.nvidia.com/settings/api-keys) to get your free API key / 获取免费 API 密钥。
+Visit [build.nvidia.com/settings/api-keys](https://build.nvidia.com/settings/api-keys) to get your free API key.
 
-### 2. Install Dependencies / 安装依赖
+### 2. Install Dependencies
 
 ```bash
-# Requires Python 3.10+ / 需要 Python 3.10+
 cd /path/to/claude-nim-bridge
 
-# Using uv (recommended) / 使用 uv（推荐）
+# Using uv (recommended)
 uv venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 uv pip install -e .
 
-# Or using pip / 或使用 pip
+# Or using pip
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
-### 3. Configure Environment Variables / 配置环境变量
+### 3. Configure Environment Variables
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` file / 编辑 `.env` 文件：
+Edit `.env` file:
 
 ```env
 NVIDIA_NIM_API_KEY=nvapi-your-key
 MODEL=moonshotai/kimi-k2-thinking
 ```
 
-### 4. Start the Service / 启动服务
+### 4. Start the Service
 
 ```bash
-# Direct start / 直接启动
+# Direct start
 uvicorn api.app:app --host 0.0.0.0 --port 8082
 
-# Or use script / 或使用脚本
+# Or use script
 ./run.sh
 ```
 
-### 5. Use Claude Code / 使用 Claude Code
+### 5. Use Claude Code
 
 ```bash
 ANTHROPIC_AUTH_TOKEN=ccnim \
@@ -88,70 +85,69 @@ Or configure in `~/.claude/settings.json`:
 
 ---
 
-## Service Management / 服务管理
+## Service Management
 
-### Unified Management Script / 统一管理脚本
+### Unified Management Script
 
 ```bash
 cd /path/to/claude-nim-bridge
 
-# Start / 启动
+# Start
 ./manage.sh start
 
-# Stop / 停止
+# Stop
 ./manage.sh stop
 
-# Restart / 重启
+# Restart
 ./manage.sh restart
 
-# Status / 状态
+# Status
 ./manage.sh status
 
-# Logs / 日志
+# Logs
 ./manage.sh logs
 
-# Install with auto-start / 安装并配置开机自启
+# Install with auto-start
 ./manage.sh install
 
-# Uninstall / 卸载
+# Uninstall
 ./manage.sh uninstall
 ```
 
-### Platform Support / 平台支持
+### Platform Support
 
-| Platform / 平台 | Auto-start Method / 开机自启方式 | Requirements / 要求 |
-|------------------|----------------------------------|-------------------|
+| Platform | Auto-start Method | Requirements |
+|----------|------------------|--------------|
 | **macOS** | LaunchAgent | No additional requirements |
 | **Linux** | systemd | Requires sudo for install/uninstall |
-| **Windows** | Manual (WIP) | Use WSL or manual start |
 
-### Quick Commands / 快速命令
+### Quick Commands
 
 ```bash
-# Start background service / 启动后台服务
+# Start background service
 ./start_service.sh      # macOS/Linux
-./run.sh                # Foreground / 前台运行
+./run.sh                # Foreground
 
-# Quick check / 快速检查
+# Quick health check
 curl http://localhost:8082/health
 ```
 
 ---
 
-## Available Models / 可用模型
+## Available Models
 
-View full list at / 查看完整列表: [build.nvidia.com/explore/discover](https://build.nvidia.com/explore/discover)
+View full list at [build.nvidia.com/explore/discover](https://build.nvidia.com/explore/discover)
 
-Recommended models / 推荐模型：
+Recommended models:
 
-| Model ID / 模型 ID | Type / 类型 | Description / 说明 |
-|--------------------|-------------|--------------------|
-| `moonshotai/kimi-k2-thinking` | Reasoning / 推理模型 | Strong reasoning capability, default choice / 强大的推理能力，默认选择 |
-| `moonshotai/kimi-k2.5` | General / 通用模型 | Balanced performance / 平衡的性能与速度 |
-| `z-ai/glm4.7` | Chinese optimized / 中文优化 | Optimized for Chinese content / 针对中文内容优化 |
-| `minimaxai/minimax-m2.1` | Efficient / 高效模型 | Fast response for simple tasks / 快速响应，适合简单任务 |
+| Model ID | Type | Description |
+|----------|------|-------------|
+| `moonshotai/kimi-k2-thinking` | Reasoning | Strong reasoning capability, default choice |
+| `moonshotai/kimi-k2.5` | General | Balanced performance |
+| `z-ai/glm4.7` | Chinese optimized | Optimized for Chinese content |
+| `minimaxai/minimax-m2.1` | Efficient | Fast response for simple tasks |
 
-Update model list / 更新模型列表：
+Update model list:
 
 ```bash
 curl "https://integrate.api.nvidia.com/v1/models" > nvidia_nim_models.json
@@ -159,93 +155,99 @@ curl "https://integrate.api.nvidia.com/v1/models" > nvidia_nim_models.json
 
 ---
 
-## API Endpoints / API 端点
+## API Endpoints
 
-| Endpoint / 端点 | Method / 方法 | Description / 说明 |
-|------------------|----------------|---------------------|
-| `/v1/messages` | POST | Create message (streaming/non-streaming) / 发送消息（流式/非流式）|
-| `/v1/messages/count_tokens` | POST | Count tokens / 计算 Token 数量 |
-| `/health` | GET | Health check / 健康检查 |
-| `/` | GET | Service info / 服务信息 |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/messages` | POST | Create message (streaming/non-streaming) |
+| `/v1/messages/count_tokens` | POST | Count tokens |
+| `/health` | GET | Health check |
+| `/` | GET | Service info |
 
 ---
 
-## Project Structure / 项目结构
+## Project Structure
 
 ```
 claude-nim-bridge/
-├── manage.sh              # Main management script / 主管理脚本
-├── start_service.sh       # Start script / 启动脚本
-├── stop_service.sh        # Stop script / 停止脚本
-├── run.sh                 # Run script / 运行脚本
-├── server.py              # Uvicorn entry point / uvicorn 入口
-├── api/                   # FastAPI application / FastAPI 应用
-│   ├── app.py            # App configuration / 应用配置
-│   ├── routes.py         # API routes / API 路由
-│   ├── models.py         # Pydantic models / Pydantic 模型
-│   ├── dependencies.py   # Dependency injection / 依赖注入
-│   └── request_utils.py  # Request utilities / 请求工具
-├── providers/             # Provider implementations / 提供商实现
-│   ├── nvidia_nim/       # NVIDIA NIM integration
-│   │   ├── client.py     # API client / API 客户端
-│   │   ├── converter.py  # Format conversion / 格式转换
-│   │   └── provider.py   # Provider implementation / 提供商实现
-│   └── utils/            # Utilities / 工具类
-│       └── sse_builder.py # SSE streaming builder / SSE 流式构建
-├── config/                # Configuration / 配置
-│   └── settings.py       # Pydantic settings / Pydantic 配置
-├── tests/                 # Tests / 测试
-├── .env                   # Environment variables (create this) / 环境变量（需创建）
-├── .env.example           # Environment variables template / 环境变量示例
-└── pyproject.toml         # Project configuration / 项目配置
+├── manage.sh              # Main management script
+├── start_service.sh       # Start script
+├── stop_service.sh        # Stop script
+├── run.sh                 # Run script
+├── server.py              # Uvicorn entry point
+├── api/                   # FastAPI application
+│   ├── app.py            # App configuration
+│   ├── routes.py         # API routes
+│   ├── models.py         # Pydantic models
+│   ├── dependencies.py   # Dependency injection
+│   └── request_utils.py  # Request utilities
+├── providers/             # Provider implementations
+│   ├── nvidia_nim.py     # NVIDIA NIM provider
+│   ├── nvidia_mixins.py  # NIM provider mixins
+│   ├── model_utils.py    # Model name utilities
+│   ├── rate_limit.py     # Rate limiting
+│   ├── exceptions.py     # Provider exceptions
+│   └── utils/            # Utility modules
+│       ├── sse_builder.py       # SSE streaming
+│       ├── message_converter.py # Format conversion
+│       ├── think_parser.py      # Thinking tag parser
+│       └── heuristic_tool_parser.py # Tool call parser
+├── config/                # Configuration
+│   └── settings.py       # Pydantic settings
+├── tests/                 # Tests
+├── .env                   # Environment variables (create this)
+├── .env.example           # Environment variables template
+├── claude-nim-bridge.service.example  # systemd service file
+├── com.claude-nim-bridge.plist.example # LaunchAgent file
+└── pyproject.toml         # Project configuration
 ```
 
 ---
 
-## Configuration / 配置参数
+## Configuration
 
-| Parameter / 参数 | Description / 说明 | Default / 默认值 | Required / 必需 |
-|------------------|-------------------|------------------|----------------|
-| `NVIDIA_NIM_API_KEY` | NVIDIA API Key / NVIDIA API 密钥 | - | Yes / 是 |
-| `MODEL` | Default model ID / 默认模型 ID | `moonshotai/kimi-k2-thinking` | No / 否 |
-| `NVIDIA_NIM_RATE_LIMIT` | Rate limit per window / 每时间窗口请求限制 | `40` | No / 否 |
-| `NVIDIA_NIM_RATE_WINDOW` | Rate window in seconds / 时间窗口（秒）| `60` | No / 否 |
-| `FAST_PREFIX_DETECTION` | Enable prefix detection / 启用前缀检测 | `true` | No / 否 |
-| `ENABLE_NETWORK_PROBE_MOCK` | Enable network probe mock / 启用网络探测模拟 | `true` | No / 否 |
-| `ENABLE_TITLE_GENERATION_SKIP` | Skip title generation / 跳过标题生成 | `true` | No / 否 |
+| Parameter | Description | Default | Required |
+|-----------|-------------|---------|----------|
+| `NVIDIA_NIM_API_KEY` | NVIDIA API Key | - | Yes |
+| `MODEL` | Default model ID | `moonshotai/kimi-k2-thinking` | No |
+| `NVIDIA_NIM_RATE_LIMIT` | Rate limit per window | `40` | No |
+| `NVIDIA_NIM_RATE_WINDOW` | Rate window in seconds | `60` | No |
+| `FAST_PREFIX_DETECTION` | Enable prefix detection | `true` | No |
+| `ENABLE_NETWORK_PROBE_MOCK` | Enable network probe mock | `true` | No |
+| `ENABLE_TITLE_GENERATION_SKIP` | Skip title generation | `true` | No |
 
-Full configuration reference / 完整配置参考: See `.env.example` / 参见 `.env.example`
+For full configuration reference, see `.env.example`.
 
 ---
 
-## Troubleshooting / 故障排查
+## Troubleshooting
 
-### Port Already Occupied / 端口被占用
+### Port Already Occupied
 
 ```bash
-# Check process using the port / 查看占用端口的进程
+# Check process using the port
 lsof -i :8082
 
-# Stop service / 停止服务
+# Stop service
 ./stop_service.sh
 ```
 
-### Request Failed / 请求失败
+### Request Failed
 
 ```bash
-# View logs / 查看日志
-tail -f server.log
+# View logs
+tail -f service.log
 
-# Verify API Key / 验证 API Key
+# Verify API Key
 curl https://integrate.api.nvidia.com/v1/models \
   -H "Authorization: Bearer $NVIDIA_NIM_API_KEY"
 ```
 
-More troubleshooting details / 更多故障排查详情: See the documentation repository / 参见文档仓库 [cc-nim-book](https://github.com/aixxww/cc-nim-book)
+For more troubleshooting details, see [README_CN.md](README_CN.md).
 
 ---
 
-## Python SDK Usage / Python SDK 使用
+## Python SDK Usage
 
 ```python
 import anthropic
@@ -268,105 +270,63 @@ print(response.content[0].text)
 
 ---
 
-## Documentation / 文档
-
-For detailed documentation / 完整文档，请访问：
-
-- 📚 **Documentation Repository / 文档仓库**: [https://github.com/aixxww/cc-nim-book](https://github.com/aixxww/cc-nim-book)
-  - [Quick Start / 快速开始](https://github.com/aixxww/cc-nim-book/blob/main/01-%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B.md)
-  - [Configuration / 配置说明](https://github.com/aixxww/cc-nim-book/blob/main/02-%E9%85%8D%E7%BD%AE%E8%AF%B4%E6%98%8E.md)
-  - [Usage Guide / 使用指南](https://github.com/aixxww/cc-nim-book/blob/main/03-%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97.md)
-  - [API Reference / API 参考](https://github.com/aixxww/cc-nim-book/blob/main/04-API%E5%8F%82%E8%80%83.md)
-  - [Troubleshooting / 故障排查](https://github.com/aixxww/cc-nim-book/blob/main/05-%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5.md)
-  - [Architecture / 架构设计](https://github.com/aixxww/cc-nim-book/blob/main/06-%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1.md)
-
----
-
-## Auto-start / 开机自启
+## Auto-start Setup
 
 ### macOS (LaunchAgent)
 
 ```bash
-# Install and configure / 安装并配置
+# Install and configure
 ./manage.sh install
 
-# Manual setup / 手动设置
+# Manual setup
 cp com.claude-nim-bridge.plist.example ~/Library/LaunchAgents/com.claude-nim-bridge.plist
-# Edit the plist file with your settings / 编辑 plist 文件填入配置
+# Edit the plist file with your settings
 launchctl load ~/Library/LaunchAgents/com.claude-nim-bridge.plist
 launchctl start com.claude-nim-bridge
 
-# Uninstall / 卸载
+# Uninstall
 ./manage.sh uninstall
 ```
 
 ### Linux (systemd)
 
 ```bash
-# Install and configure / 安装并配置
+# Install and configure
 sudo ./manage.sh install
 
-# Manual setup / 手动设置
+# Manual setup
 sudo cp claude-nim-bridge.service.example /etc/systemd/system/claude-nim-bridge.service
-# Edit the service file with your paths and API key / 编辑服务文件填入路径和密钥
+# Edit the service file with your paths and API key
 sudo systemctl daemon-reload
 sudo systemctl enable claude-nim-bridge
 sudo systemctl start claude-nim-bridge
 
-# View logs / 查看日志
+# View logs
 sudo journalctl -u claude-nim-bridge -f
 
-# Uninstall / 卸载
+# Uninstall
 sudo ./manage.sh uninstall
 ```
 
 ---
 
-## Comparison / 对比
+## Comparison
 
-| Feature / 特性 | Anthropic Official / 官方 API | Claude NIM Bridge |
-|----------------|-------------------------------|-------------------|
-| Cost / 费用 | Pay-per-use / 按使用收费 | Free / 完全免费 |
-| Rate Limit / 速率限制 | Depends on plan / 取决于套餐 | 40 req/min |
-| Model Selection / 模型选择 | Claude 3/4 Series / Claude 3/4 系列 | NVIDIA NIM Platform Models / NVIDIA NIM 平台模型 |
-| Streaming / 流式 | ✅ | ✅ |
-
----
-
-## License / 许可证
-
-MIT License - See [LICENSE](LICENSE) file / 详见 [LICENSE](LICENSE) 文件
+| Feature | Anthropic Official | Claude NIM Bridge |
+|---------|-------------------|-------------------|
+| Cost | Pay-per-use | Free |
+| Rate Limit | Depends on plan | 40 req/min |
+| Model Selection | Claude 3/4 Series | NVIDIA NIM Platform |
+| Streaming | ✅ | ✅ |
 
 ---
 
-## Changelog / 更新日志
+## License
 
-### v2.2.0 (2026-03-19)
-
-- ✅ **Simplified Project / 精简项目** - Removed Telegram Bot and CLI integration, pure proxy mode / 移除 Telegram Bot 和 CLI 集成，专注纯代理模式
-- ✅ **Fixed Log Leak / 修复日志泄漏** - Disabled SSE event debug logging to prevent log file growth / 禁用 SSE 事件调试日志，防止日志文件膨胀
-- ✅ **Optimized Log Level / 优化日志级别** - Default INFO level, reduced verbose output / 默认使用 INFO 级别，减少冗余输出
-- ✅ **Fixed Client Cleanup / 修复客户端清理** - Correctly close AsyncOpenAI client / 正确关闭 AsyncOpenAI 客户端
-- ✅ **Bilingual Documentation / 双语文档** - Added English and Chinese documentation / 添加中英双语文档
-
-### v2.1.0 (2026-02-12)
-
-- ✅ **Fixed Connection Pool Issue / 修复连接池问题** - Solved connection leak in proxy environments / 彻底解决代理环境下的连接泄漏
-- ✅ Long-term stability improvement / 长期运行稳定性大幅提升
-
-### v2.0.0 (2026-02-12)
-
-- ✅ Initial release with custom HTTP client / 初始版本发布，包含自定义 HTTP 客户端
+MIT License - See [LICENSE](LICENSE) file
 
 ---
 
-## Credits / 原项目
+## Other Languages
 
-Based on / 基于 [Alishahryar1/cc-nim](https://github.com/Alishahryar1/cc-nim) - forked and significantly improved / 分支并大幅改进
-
----
-
-## GitHub Repositories / GitHub 仓库
-
-- **Main Project / 主项目**: [https://github.com/aixxww/claude-nim-bridge](https://github.com/aixxww/claude-nim-bridge)
-- **Documentation / 文档**: [https://github.com/aixxww/cc-nim-book](https://github.com/aixxww/cc-nim-book)
+- [中文文档 (Chinese)](README_CN.md)
