@@ -243,7 +243,7 @@ curl https://integrate.api.nvidia.com/v1/models \
   -H "Authorization: Bearer $NVIDIA_NIM_API_KEY"
 ```
 
-更多故障排查详情，请查看日志文件或运行 `./manage.sh status`。
+更多故障排查详情，请查看 [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)。
 
 ---
 
@@ -321,12 +321,22 @@ sudo ./manage.sh uninstall
 
 ---
 
-## 许可证
+## 文档
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+详细文档请查看 [docs](docs) 目录：
+
+- **[架构设计](docs/ARCHITECTURE.md)** - 系统架构和设计
+- **[API 参考](docs/API.md)** - 完整的 API 文档
+- **[故障排查](docs/TROUBLESHOOTING.md)** - 常见问题和解决方案
 
 ---
 
 ## 其他语言
 
 - [English Documentation](README.md)
+
+---
+
+## 许可证
+
+MIT License - 详见 [LICENSE](LICENSE) 文件

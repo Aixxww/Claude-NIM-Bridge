@@ -243,7 +243,7 @@ curl https://integrate.api.nvidia.com/v1/models \
   -H "Authorization: Bearer $NVIDIA_NIM_API_KEY"
 ```
 
-For more troubleshooting details, see [README_CN.md](README_CN.md).
+For troubleshooting details, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
 ---
 
@@ -321,12 +321,22 @@ sudo ./manage.sh uninstall
 
 ---
 
-## License
+## Documentation
 
-MIT License - See [LICENSE](LICENSE) file
+For detailed documentation, see the [docs](docs) directory:
+
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
+- **[API Reference](docs/API.md)** - Complete API documentation
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
 ---
 
 ## Other Languages
 
 - [中文文档 (Chinese)](README_CN.md)
+
+---
+
+## License
+
+MIT License - See [LICENSE](LICENSE) file
