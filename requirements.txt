@@ -1,0 +1,29 @@
+# ==========================================
+# Claude NIM Bridge - Python 依赖
+# ==========================================
+# 安装: uv pip install -r requirements.txt
+# 或: pip install -r requirements.txt
+# ==========================================
+
+# Web 框架与 API
+fastapi[standard]>=0.115.11  # FastAPI 主框架 (含 Uvicorn, starlette 等)
+uvicorn>=0.34.0              # ASGI 服务器
+httpx>=0.25.0                # 异步 HTTP 客户端 (用于调用 NIM API)
+
+# 数据验证与配置
+pydantic>=2.0.0              # 数据验证库
+pydantic-settings>=2.12.0   # Pydantic 设置管理
+python-dotenv>=1.0.0         # 从 .env 加载环境变量
+
+# AI/LLM 相关
+tiktoken>=0.7.0              # OpenAI Tokenizer (计算 tokens)
+openai>=2.16.0               # OpenAI SDK (可选，兼容某些 API)
+
+# WebSocket 支持
+websockets>=13.0             # WebSocket 协议支持 (用于流式响应)
+
+# 异步 HTTP 请求
+aiohttp>=3.13.3              # 更高性能的异步 HTTP 客户端
+
+# 速率限制
+aiolimiter>=1.1.0            # 异步速率限制器 (防止 API 超限)
