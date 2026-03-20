@@ -21,6 +21,7 @@ def get_provider() -> NvidiaNimProvider:
     """Get or create the NvidiaNimProvider instance.
 
     Uses singleton pattern to ensure only one client exists per application.
+    Includes model rotation support for handling rate limits.
     """
     global _provider
     if _provider is None:
@@ -31,8 +32,13 @@ def get_provider() -> NvidiaNimProvider:
             rate_limit=settings.nvidia_nim_rate_limit,
             rate_window=settings.nvidia_nim_rate_window,
         )
-        _provider = NvidiaNimProvider(config)
-        logger.info("Provider singleton created")
+        _provider = NvidiaNimProvider(
+            config,
+            fallback_models=settings.model_fallback
+        )
+        logger.info(
+            f"Provider singleton created with {len(settings.model_fallback)} fallback models"
+        )
     return _provider
 
 

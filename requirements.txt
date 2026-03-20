@@ -22,8 +22,5 @@ openai>=2.16.0               # OpenAI SDK (可选，兼容某些 API)
 # WebSocket 支持
 websockets>=13.0             # WebSocket 协议支持 (用于流式响应)
 
-# 异步 HTTP 请求
-aiohttp>=3.13.3              # 更高性能的异步 HTTP 客户端
-
 # 速率限制
 aiolimiter>=1.1.0            # 异步速率限制器 (防止 API 超限)

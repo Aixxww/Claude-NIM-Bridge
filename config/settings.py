@@ -19,8 +19,20 @@ class Settings(BaseSettings):
     nvidia_nim_api_key: str = ""
 
     # ==================== Model ====================
-    # All Claude model requests are mapped to this single model
-    model: str = "moonshotai/kimi-k2-thinking"
+    # 支持多模型轮转以突破单模型速率限制
+    # 优先级从高到低：主模型 → 备用1 → 备用2...
+    model: str = "z-ai/glm4.7"
+    model_fallback: list = [
+        # 主备选 (深度思考类)
+        "z-ai/glm5",
+        "qwen/qwq-32b",
+        # 大模型备选
+        "meta/llama-3.1-405b-instruct",
+        "qwen/qwen3.5-122b-a10b",
+        # 通用备选
+        "deepseek-ai/deepseek-v3.2",
+        "mistralai/mistral-large-3-675b-instruct-2512",
+    ]
 
     # ==================== Rate Limiting ====================
     nvidia_nim_rate_limit: int = 40
