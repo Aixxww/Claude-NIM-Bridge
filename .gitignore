@@ -1,5 +1,42 @@
+# Environment
 .env
-node_modules/
-.DS_Store
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+
+# Logs
 *.log
+*.log.*
+server.log*
+
+# PID files
 *.pid
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# NVIDIA cached model list (auto-refreshed)
+nvidia_nim_models_new.json
+
+# UV
+# uv.lock is committed for reproducibility

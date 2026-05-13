@@ -1,6 +1,6 @@
 # Claude NIM Bridge
 
-> Use NVIDIA's free NIM API (40 req/min) as a drop-in replacement for Anthropic API with Claude Code
+> Use NVIDIA's free NIM API (40 req/min) or Xiaomi MiMo as a drop-in replacement for Anthropic API with Claude Code
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
@@ -12,69 +12,90 @@
 
 | Feature | Description |
 |---------|-------------|
-| 🚀 **Free API** | Use NVIDIA NIM free tier (40 req/min) |
-| 🔄 **API Proxy** | Translation from Anthropic API format to NVIDIA NIM format |
-| ⚡ **Streaming Support** | Full support for Anthropic-style streaming responses |
+| 🚀 **Free API** | Use NVIDIA NIM free tier (40 req/min) or Xiaomi MiMo |
+| 🔄 **Multi-Provider** | Switch between NVIDIA NIM and Xiaomi MiMo via config |
+| 🔀 **Model Rotation** | Auto-rotate through 7+ fallback models when rate-limited (429) |
+| ⚡ **Streaming Support** | Full Anthropic-style SSE streaming responses |
 | 🎯 **Reasoning Models** | Support for thinking/reasoning model outputs |
 | 🛡️ **Smart Optimization** | Intelligent skipping of quota checks and title generation requests |
 | 📦 **Lightweight** | Pure proxy mode, minimal dependencies |
 
 ---
 
+## Architecture
+
+```
+Claude Code ──[Anthropic API]──> Claude NIM Bridge (localhost:8082) ──[OpenAI API]──> NVIDIA NIM / Xiaomi MiMo
+```
+
+The bridge translates Anthropic Messages API format to OpenAI-compatible chat completions format, enabling Claude Code to work with any OpenAI-compatible backend.
+
+---
+
 ## Quick Start
 
-### 1. Get NVIDIA API Key
+### 1. Get an API Key
 
-Visit [build.nvidia.com/settings/api-keys](https://build.nvidia.com/settings/api-keys) to get your free API key.
+**NVIDIA NIM** (free, 40 req/min):
+Visit [build.nvidia.com/settings/api-keys](https://build.nvidia.com/settings/api-keys)
 
-### 2. Install Dependencies
+**Xiaomi MiMo** (optional alternative):
+Get API key from [MiMo platform](https://api.xiaomimimo.com)
+
+### 2. Install
 
 ```bash
-cd /path/to/claude-nim-bridge
+git clone git@github.com:Aixxww/Claude-NIM-Bridge.git
+cd Claude-NIM-Bridge
 
 # Using uv (recommended)
-uv venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+uv venv && source .venv/bin/activate
 uv pip install -e .
 
 # Or using pip
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -e .
 ```
 
-### 3. Configure Environment Variables
+### 3. Configure
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` file:
+Edit `.env`:
 
 ```env
-NVIDIA_NIM_API_KEY=nvapi-your-key
+# --- Provider Selection ---
+PROVIDER=nvidia_nim          # "nvidia_nim" (default) or "mimo"
+
+# --- NVIDIA NIM ---
+NVIDIA_NIM_API_KEY=nvapi-your-key-here
 MODEL=moonshotai/kimi-k2-thinking
+
+# --- Xiaomi MiMo (if using mimo provider) ---
+# PROVIDER=mimo
+# MIMO_API_KEY=your-mimo-key
+# MIMO_MODEL=mimo-v2.5-pro
 ```
 
-### 4. Start the Service
+### 4. Start
 
 ```bash
-# Direct start
+# Foreground
+./cc-nim.sh start
+
+# Or directly
 uvicorn api.app:app --host 0.0.0.0 --port 8082
-
-# Or use script
-./run.sh
 ```
 
-### 5. Use Claude Code
+### 5. Use with Claude Code
 
 ```bash
-ANTHROPIC_AUTH_TOKEN=ccnim \
-ANTHROPIC_BASE_URL=http://localhost:8082 \
-claude
+ANTHROPIC_AUTH_TOKEN=ccnim ANTHROPIC_BASE_URL=http://localhost:8082 claude
 ```
 
-Or configure in `~/.claude/settings.json`:
+Or add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -85,50 +106,67 @@ Or configure in `~/.claude/settings.json`:
 
 ---
 
-## Service Management
+## Multi-Provider Support
 
-### Unified Management Script
+### NVIDIA NIM (Default)
 
-```bash
-cd /path/to/claude-nim-bridge
+The primary provider using NVIDIA's free NIM API. Supports 100+ models including reasoning models.
 
-# Start
-./manage.sh start
-
-# Stop
-./manage.sh stop
-
-# Restart
-./manage.sh restart
-
-# Status
-./manage.sh status
-
-# Logs
-./manage.sh logs
-
-# Install with auto-start
-./manage.sh install
-
-# Uninstall
-./manage.sh uninstall
+```env
+PROVIDER=nvidia_nim
+NVIDIA_NIM_API_KEY=nvapi-xxx
+MODEL=moonshotai/kimi-k2-thinking
 ```
 
-### Platform Support
+### Xiaomi MiMo
 
-| Platform | Auto-start Method | Requirements |
-|----------|------------------|--------------|
+Xiaomi's MiMo model via OpenAI-compatible API. Extends the NIM provider with MiMo-specific defaults.
+
+```env
+PROVIDER=mimo
+MIMO_API_KEY=your-key
+MIMO_MODEL=mimo-v2.5-pro
+```
+
+---
+
+## Model Rotation
+
+When a model hits its rate limit (HTTP 429), the bridge automatically rotates to the next available model. Configure fallback models:
+
+```env
+MODEL=moonshotai/kimi-k2-thinking
+MODEL_FALLBACK=moonshotai/kimi-k2.5,z-ai/glm4.7,minimaxai/minimax-m2.1
+```
+
+Rotation order: Primary MODEL -> FALLBACK[0] -> FALLBACK[1] -> ... -> back to primary.
+
+---
+
+## Service Management
+
+All-in-one management script:
+
+```bash
+./cc-nim.sh start      # Start service
+./cc-nim.sh stop       # Stop service
+./cc-nim.sh restart    # Restart
+./cc-nim.sh status     # Check status
+./cc-nim.sh logs       # View logs
+./cc-nim.sh install    # Install as auto-start service
+./cc-nim.sh uninstall  # Remove auto-start service
+```
+
+### Auto-start
+
+| Platform | Method | Notes |
+|----------|--------|-------|
 | **macOS** | LaunchAgent | No additional requirements |
 | **Linux** | systemd | Requires sudo for install/uninstall |
 
-### Quick Commands
+Health check:
 
 ```bash
-# Start background service
-./start_service.sh      # macOS/Linux
-./run.sh                # Foreground
-
-# Quick health check
 curl http://localhost:8082/health
 ```
 
@@ -136,21 +174,19 @@ curl http://localhost:8082/health
 
 ## Available Models
 
-View full list at [build.nvidia.com/explore/discover](https://build.nvidia.com/explore/discover)
-
-Recommended models:
+View full list: [build.nvidia.com/explore/discover](https://build.nvidia.com/explore/discover)
 
 | Model ID | Type | Description |
 |----------|------|-------------|
-| `moonshotai/kimi-k2-thinking` | Reasoning | Strong reasoning capability, default choice |
+| `moonshotai/kimi-k2-thinking` | Reasoning | Strong reasoning, default choice |
 | `moonshotai/kimi-k2.5` | General | Balanced performance |
-| `z-ai/glm4.7` | Chinese optimized | Optimized for Chinese content |
+| `z-ai/glm4.7` | Chinese | Optimized for Chinese content |
 | `minimaxai/minimax-m2.1` | Efficient | Fast response for simple tasks |
 
-Update model list:
+Refresh model cache:
 
 ```bash
-curl "https://integrate.api.nvidia.com/v1/models" > nvidia_nim_models.json
+curl "https://integrate.api.nvidia.com/v1/models" -H "Authorization: Bearer $NVIDIA_NIM_API_KEY" > nvidia_nim_models.json
 ```
 
 ---
@@ -166,84 +202,25 @@ curl "https://integrate.api.nvidia.com/v1/models" > nvidia_nim_models.json
 
 ---
 
-## Project Structure
-
-```
-claude-nim-bridge/
-├── manage.sh              # Main management script
-├── start_service.sh       # Start script
-├── stop_service.sh        # Stop script
-├── run.sh                 # Run script
-├── server.py              # Uvicorn entry point
-├── api/                   # FastAPI application
-│   ├── app.py            # App configuration
-│   ├── routes.py         # API routes
-│   ├── models.py         # Pydantic models
-│   ├── dependencies.py   # Dependency injection
-│   └── request_utils.py  # Request utilities
-├── providers/             # Provider implementations
-│   ├── nvidia_nim.py     # NVIDIA NIM provider
-│   ├── nvidia_mixins.py  # NIM provider mixins
-│   ├── model_utils.py    # Model name utilities
-│   ├── rate_limit.py     # Rate limiting
-│   ├── exceptions.py     # Provider exceptions
-│   └── utils/            # Utility modules
-│       ├── sse_builder.py       # SSE streaming
-│       ├── message_converter.py # Format conversion
-│       ├── think_parser.py      # Thinking tag parser
-│       └── heuristic_tool_parser.py # Tool call parser
-├── config/                # Configuration
-│   └── settings.py       # Pydantic settings
-├── tests/                 # Tests
-├── .env                   # Environment variables (create this)
-├── .env.example           # Environment variables template
-├── claude-nim-bridge.service.example  # systemd service file
-├── com.claude-nim-bridge.plist.example # LaunchAgent file
-└── pyproject.toml         # Project configuration
-```
-
----
-
 ## Configuration
 
-| Parameter | Description | Default | Required |
-|-----------|-------------|---------|----------|
-| `NVIDIA_NIM_API_KEY` | NVIDIA API Key | - | Yes |
-| `MODEL` | Default model ID | `moonshotai/kimi-k2-thinking` | No |
-| `NVIDIA_NIM_RATE_LIMIT` | Rate limit per window | `40` | No |
-| `NVIDIA_NIM_RATE_WINDOW` | Rate window in seconds | `60` | No |
-| `FAST_PREFIX_DETECTION` | Enable prefix detection | `true` | No |
-| `ENABLE_NETWORK_PROBE_MOCK` | Enable network probe mock | `true` | No |
-| `ENABLE_TITLE_GENERATION_SKIP` | Skip title generation | `true` | No |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `PROVIDER` | Backend provider (`nvidia_nim` or `mimo`) | `nvidia_nim` |
+| `MODEL` | Primary model ID | `moonshotai/kimi-k2-thinking` |
+| `MODEL_FALLBACK` | Comma-separated fallback models | *(empty)* |
+| `NVIDIA_NIM_API_KEY` | NVIDIA API key | *(required for nvidia_nim)* |
+| `MIMO_API_KEY` | MiMo API key | *(required for mimo)* |
+| `MIMO_MODEL` | MiMo model ID | `mimo-v2.5-pro` |
+| `NVIDIA_NIM_RATE_LIMIT` | Rate limit per window | `40` |
+| `NVIDIA_NIM_RATE_WINDOW` | Rate window in seconds | `60` |
+| `FAST_PREFIX_DETECTION` | Enable prefix detection | `true` |
+| `ENABLE_NETWORK_PROBE_MOCK` | Enable network probe mock | `true` |
+| `ENABLE_TITLE_GENERATION_SKIP` | Skip title generation requests | `true` |
+| `NVIDIA_NIM_MAX_TOKENS` | Max output tokens | `81920` |
+| `NVIDIA_NIM_REASONING_EFFORT` | Reasoning effort level | `high` |
 
-For full configuration reference, see `.env.example`.
-
----
-
-## Troubleshooting
-
-### Port Already Occupied
-
-```bash
-# Check process using the port
-lsof -i :8082
-
-# Stop service
-./stop_service.sh
-```
-
-### Request Failed
-
-```bash
-# View logs
-tail -f service.log
-
-# Verify API Key
-curl https://integrate.api.nvidia.com/v1/models \
-  -H "Authorization: Bearer $NVIDIA_NIM_API_KEY"
-```
-
-For troubleshooting details, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+See `.env.example` for full configuration reference.
 
 ---
 
@@ -261,7 +238,7 @@ response = client.messages.create(
     model="claude-opus-4-6",
     max_tokens=1024,
     messages=[
-        {"role": "user", "content": "Hello, please introduce yourself"}
+        {"role": "user", "content": "Hello!"}
     ]
 )
 
@@ -270,42 +247,75 @@ print(response.content[0].text)
 
 ---
 
-## Auto-start Setup
+## Project Structure
 
-### macOS (LaunchAgent)
-
-```bash
-# Install and configure
-./manage.sh install
-
-# Manual setup
-cp com.claude-nim-bridge.plist.example ~/Library/LaunchAgents/com.claude-nim-bridge.plist
-# Edit the plist file with your settings
-launchctl load ~/Library/LaunchAgents/com.claude-nim-bridge.plist
-launchctl start com.claude-nim-bridge
-
-# Uninstall
-./manage.sh uninstall
+```
+Claude-NIM-Bridge/
+├── cc-nim.sh                      # Unified management script
+├── server.py                      # Uvicorn entry point
+├── pyproject.toml                 # Project config (v2.2.0)
+├── .env.example                   # Environment template
+├── LICENSE                        # MIT
+│
+├── api/                           # FastAPI application
+│   ├── app.py                     # App factory, lifespan, error handlers
+│   ├── routes.py                  # /v1/messages, /health endpoints
+│   ├── models.py                  # Pydantic request/response models
+│   ├── dependencies.py            # DI — provider & settings singletons
+│   └── request_utils.py           # Quota check, title gen, prefix detection
+│
+├── providers/                     # LLM provider implementations
+│   ├── base.py                    # BaseProvider abstract class
+│   ├── nvidia_nim.py              # NVIDIA NIM provider (OpenAI SDK)
+│   ├── nvidia_mixins.py           # NIM-specific mixins
+│   ├── mimo.py                    # Xiaomi MiMo provider
+│   ├── model_utils.py             # Model name mapping/rotation
+│   ├── model_rotator.py           # Multi-model rotation logic
+│   ├── rate_limit.py              # Async rate limiter
+│   ├── exceptions.py              # Custom exceptions
+│   ├── logging_utils.py           # Compact request logging
+│   └── utils/
+│       ├── sse_builder.py         # SSE streaming builder
+│       ├── message_converter.py   # Anthropic <-> OpenAI format conversion
+│       ├── think_parser.py        # Thinking tag parser
+│       └── heuristic_tool_parser.py  # Tool call parser
+│
+├── config/
+│   └── settings.py                # Pydantic Settings from .env
+│
+└── tests/                         # Test suite
 ```
 
-### Linux (systemd)
+---
+
+## Troubleshooting
+
+### Port Already in Use
 
 ```bash
-# Install and configure
-sudo ./manage.sh install
+lsof -i :8082
+./cc-nim.sh stop
+```
 
-# Manual setup
-sudo cp claude-nim-bridge.service.example /etc/systemd/system/claude-nim-bridge.service
-# Edit the service file with your paths and API key
-sudo systemctl daemon-reload
-sudo systemctl enable claude-nim-bridge
-sudo systemctl start claude-nim-bridge
+### Rate Limited (429)
 
-# View logs
-sudo journalctl -u claude-nim-bridge -f
+The bridge auto-rotates models. If all models are rate-limited, add more fallbacks:
 
-# Uninstall
-sudo ./manage.sh uninstall
+```env
+MODEL_FALLBACK=moonshotai/kimi-k2.5,z-ai/glm4.7,minimaxai/minimax-m2.1,nvidia/nemotron-3-8b-chat
+```
+
+### Request Failed
+
+```bash
+# Check logs
+./cc-nim.sh logs
+
+# Verify API key
+curl https://integrate.api.nvidia.com/v1/models   -H "Authorization: Bearer $NVIDIA_NIM_API_KEY"
+
+# Health check
+curl http://localhost:8082/health
 ```
 
 ---
@@ -315,25 +325,11 @@ sudo ./manage.sh uninstall
 | Feature | Anthropic Official | Claude NIM Bridge |
 |---------|-------------------|-------------------|
 | Cost | Pay-per-use | Free |
-| Rate Limit | Depends on plan | 40 req/min |
-| Model Selection | Claude 3/4 Series | NVIDIA NIM Platform |
+| Rate Limit | Depends on plan | 40 req/min (rotatable) |
+| Model Selection | Claude 3/4 Series | 100+ NIM models / MiMo |
 | Streaming | ✅ | ✅ |
-
----
-
-## Documentation
-
-For detailed documentation, see the [docs](docs) directory:
-
-- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
-- **[API Reference](docs/API.md)** - Complete API documentation
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-
----
-
-## Other Languages
-
-- [中文文档 (Chinese)](README_CN.md)
+| Tool Use | ✅ | ✅ (heuristic parsing) |
+| Thinking | ✅ | ✅ |
 
 ---
 

@@ -29,25 +29,34 @@ class AnthropicToOpenAIConverter:
         for msg in messages:
             role = msg.role
             content = msg.content
+            reasoning_content = getattr(msg, "reasoning_content", None)
 
             if isinstance(content, str):
-                result.append({"role": role, "content": content})
+                msg_dict = {"role": role, "content": content}
+                if reasoning_content:
+                    msg_dict["reasoning_content"] = reasoning_content
+                result.append(msg_dict)
             elif isinstance(content, list):
                 if role == "assistant":
                     result.extend(
-                        AnthropicToOpenAIConverter._convert_assistant_message(content)
+                        AnthropicToOpenAIConverter._convert_assistant_message(
+                            content, reasoning_content
+                        )
                     )
                 elif role == "user":
                     result.extend(
                         AnthropicToOpenAIConverter._convert_user_message(content)
                     )
             else:
-                result.append({"role": role, "content": str(content)})
+                msg_dict = {"role": role, "content": str(content)}
+                if reasoning_content:
+                    msg_dict["reasoning_content"] = reasoning_content
+                result.append(msg_dict)
 
         return result
 
     @staticmethod
-    def _convert_assistant_message(content: List[Any]) -> List[Dict[str, Any]]:
+    def _convert_assistant_message(content: List[Any], reasoning_content: Optional[str] = None) -> List[Dict[str, Any]]:
         """Convert assistant message blocks."""
         text_parts = []
         tool_calls = []
@@ -99,6 +108,14 @@ class AnthropicToOpenAIConverter:
         }
         if tool_calls:
             msg["tool_calls"] = tool_calls
+
+        # Support for reasoning_content (required by MiMo and other models
+        # with thinking mode). When passing back assistant messages that
+        # contain thinking blocks, the reasoning_content field must be set
+        # for model continuity.
+        if reasoning_parts:
+            reasoning_content = "\n".join(reasoning_parts)
+            msg["reasoning_content"] = reasoning_content
 
         return [msg]
 

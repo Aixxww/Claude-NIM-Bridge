@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from typing import Union
 
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -23,6 +24,7 @@ from .request_utils import (
 )
 from config.settings import Settings
 from providers.nvidia_nim import NvidiaNimProvider
+from providers.mimo import MimoProvider
 from providers.exceptions import ProviderError
 from providers.logging_utils import log_request_compact
 
@@ -40,7 +42,7 @@ router = APIRouter()
 async def create_message(
     request_data: MessagesRequest,
     raw_request: Request,
-    provider: NvidiaNimProvider = Depends(get_provider),
+    provider: Union[NvidiaNimProvider, MimoProvider] = Depends(get_provider),
     settings: Settings = Depends(get_settings),
 ):
     """Create a message (streaming or non-streaming)."""
@@ -128,6 +130,12 @@ async def count_tokens(request_data: TokenCountRequest):
 @router.get("/")
 async def root(settings: Settings = Depends(get_settings)):
     """Root endpoint."""
+    if settings.provider == "mimo":
+        return {
+            "status": "ok",
+            "provider": "mimo",
+            "model": settings.mimo_model,
+        }
     return {
         "status": "ok",
         "provider": "nvidia_nim",

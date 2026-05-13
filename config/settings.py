@@ -1,7 +1,7 @@
 """Centralized configuration using Pydantic Settings."""
 
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
@@ -11,12 +11,24 @@ load_dotenv()
 # Fixed base URL for NVIDIA NIM
 NVIDIA_NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
+# Fixed base URL for Xiaomi MiMo (OpenAI-compatible)
+MIMO_BASE_URL_DEFAULT = "https://api.xiaomimimo.com/v1"
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
+    # ==================== Provider Selection ====================
+    # "nvidia_nim" or "mimo" — determines which provider to use
+    provider: Literal["nvidia_nim", "mimo"] = "nvidia_nim"
+
     # ==================== NVIDIA NIM Config ====================
     nvidia_nim_api_key: str = ""
+
+    # ==================== Xiaomi MiMo Config ====================
+    mimo_api_key: str = ""
+    mimo_base_url: str = MIMO_BASE_URL_DEFAULT
+    mimo_model: str = "mimo-v2.5-pro"
 
     # ==================== Model ====================
     # 支持多模型轮转以突破单模型速率限制
