@@ -1,0 +1,13 @@
+{
+  "name": "binance-square-kline",
+  "schedule": "0 9,21 * * *",
+  "description": "每日两次发布带K线卡片的Binance Square内容",
+  "command": "cd /Users/aixx/Code/Claude-NIM-Bridge && python3 binance-square-kline-poster.py",
+  "enabled": true,
+  "timezone": "Asia/Shanghai",
+  "tags": ["binance", "square", "kline", "crypto"],
+  "output": {
+    "save": true,
+    "path": "/Users/aixx/.openclaw/workspace/outputs/binance_square"
+  }
+}
