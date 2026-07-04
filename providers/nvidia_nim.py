@@ -7,7 +7,11 @@ import uuid
 from typing import Any, AsyncIterator, Optional
 
 from openai import AsyncOpenAI
-from openai import NotFoundError, RateLimitError as OpenAIRateLimitError
+from openai import (
+    APIStatusError,
+    NotFoundError,
+    RateLimitError as OpenAIRateLimitError,
+)
 
 from .base import BaseProvider, ProviderConfig
 from .utils import (
@@ -53,10 +57,10 @@ class NvidiaNimProvider(
         # 初始化多模型轮转器
         if fallback_models:
             # 构建模型列表：主模型在前，备用模型在后
-            primary_model = os.getenv("MODEL", "z-ai/glm4.7")
+            primary_model = os.getenv("MODEL", "moonshotai/kimi-k2.6")
             all_models = [primary_model] + fallback_models
         else:
-            all_models = [os.getenv("MODEL", "z-ai/glm4.7")]
+            all_models = [os.getenv("MODEL", "moonshotai/kimi-k2.6")]
 
         self._model_rotator = ModelRotator(all_models)
 
@@ -90,12 +94,12 @@ class NvidiaNimProvider(
 
         message_id = f"msg_{uuid.uuid4().hex}"
         sse = SSEBuilder(message_id, request.model, input_tokens)
+        message_started = False
 
         if waited_reactively:
             error_msg = "⏱️ Rate limit active. Retrying..."
             logger.info(f"NIM_STREAM: {message_id} - reactive wait, notifying")
-            yield sse.message_start()
-            for event in sse.emit_error(error_msg):
+            for event in self._emit_error_stream(sse, error_msg, message_started):
                 yield event
             return
 
@@ -107,8 +111,7 @@ class NvidiaNimProvider(
         for retry_count in range(max_model_retries):
             if not current_model:
                 error_msg = "⚠️ All models rate limited. Please wait and try again."
-                yield sse.message_start()
-                for event in sse.emit_error(error_msg):
+                for event in self._emit_error_stream(sse, error_msg, message_started):
                     yield event
                 return
 
@@ -129,18 +132,15 @@ class NvidiaNimProvider(
 
             # Emit message_start (仅第一次)
             if retry_count == 0:
-                for event in sse.message_start():
-                    yield event
+                yield sse.message_start()
+                message_started = True
 
             try:
                 # 执行流式请求 - 内联实现以保持简单
                 stream = await self._client.chat.completions.create(**body, stream=True)
 
-                # 重置状态用于新尝试
-                sse.blocks = type(sse.blocks)()  # 重新初始化 blocks
                 finish_reason = None
                 usage_info = None
-                error_occurred = False
 
                 async for chunk in stream:
                     if getattr(chunk, "usage", None):
@@ -222,33 +222,35 @@ class NvidiaNimProvider(
                 )
                 return
 
-            except (OpenAIRateLimitError, NotFoundError) as e:
-                # 429 速率限制或 404 模型不可用
+            except APIStatusError as e:
+                # 429 速率限制，404/410 模型不可用或已退役
+                status_code = getattr(e, "status_code", None)
+                is_rate_limit = isinstance(e, OpenAIRateLimitError) or status_code == 429
+                is_unavailable = isinstance(e, NotFoundError) or status_code in {404, 410}
+
+                if not (is_rate_limit or is_unavailable):
+                    raise
+
                 last_error = e
                 logger.warning(
-                    f"NIM_STREAM: {message_id} - {current_model} failed: {type(e).__name__}"
+                    f"NIM_STREAM: {message_id} - {current_model} failed: "
+                    f"{type(e).__name__} status={status_code}"
                 )
 
                 # 标记当前模型不可用
-                if isinstance(e, OpenAIRateLimitError):
+                if is_rate_limit:
                     self._model_rotator.handle_rate_limit(current_model)
                 else:
-                    self._model_rotator.handle_failure(current_model)
+                    self._model_rotator.handle_unavailable(current_model)
 
                 # 切换到下一个可用模型
                 current_model = self._model_rotator.get_available_model()
 
                 # 如果还有可用模型，通知切换
                 if current_model:
-                    notification = (
-                        f"🔄 Switching to model: {current_model} "
-                        f"(previous model rate limited/unavailable)"
+                    logger.info(
+                        f"NIM_STREAM: {message_id} - switching to model={current_model}"
                     )
-                    logger.info(f"NIM_STREAM: {message_id} - {notification}")
-
-                    # 发送通知到客户端
-                    for event in sse.emit_error(notification):
-                        yield event
                 else:
                     # 没有可用模型了
                     break
@@ -260,15 +262,25 @@ class NvidiaNimProvider(
                 self._model_rotator.handle_failure(current_model)
 
                 # 发送错误到客户端
-                for event in sse.emit_error(str(e)):
+                for event in self._emit_error_stream(sse, str(e), message_started):
                     yield event
                 return
 
         # 所有模型都尝试失败
         error_msg = f"⚠️ All models exhausted. Last error: {last_error}"
         logger.error(f"NIM_STREAM: {message_id} - {error_msg}")
+        for event in self._emit_error_stream(sse, error_msg, message_started):
+            yield event
+
+    def _emit_error_stream(self, sse, error_msg: str, message_started: bool):
+        """Emit a complete Anthropic SSE error response as text content."""
+        if not message_started:
+            yield sse.message_start()
         for event in sse.emit_error(error_msg):
             yield event
+        yield sse.message_delta("end_turn", sse.estimate_output_tokens())
+        yield sse.message_stop()
+        yield sse.done()
 
     def _finalize_stream(self, sse, finish_reason, usage_info, think_parser, heuristic_parser):
         """Finalize stream by emitting remaining content and stop events."""

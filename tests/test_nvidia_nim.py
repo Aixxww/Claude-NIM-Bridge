@@ -1,5 +1,7 @@
 import pytest
 import json
+import httpx
+from openai import APIStatusError
 from unittest.mock import MagicMock, AsyncMock, patch
 from providers.nvidia_nim import (
     NvidiaNimProvider,
@@ -69,9 +71,56 @@ async def test_build_request_body(nim_provider):
     assert body["messages"][0]["role"] == "system"
     assert body["messages"][0]["content"] == "System prompt"
 
-    # extra_body contents are merged into body
-    assert "thinking" in body
-    assert body["thinking"]["type"] == "enabled"
+    # Thinking output is parsed from model responses, but unsupported NIM
+    # request parameters should not be injected.
+    assert "extra_body" not in body
+
+
+@pytest.mark.asyncio
+async def test_build_request_body_filters_reasoning_split(nim_provider):
+    """NVIDIA rejects reasoning_split, including inside extra_body."""
+    req = MockRequest(
+        extra_body={
+            "reasoning_split": True,
+            "foo": "bar",
+            "chat_template_kwargs": {
+                "thinking": True,
+                "reasoning_split": True,
+                "clear_thinking": False,
+            },
+        }
+    )
+    body = nim_provider._build_request_body(req, stream=True)
+
+    assert body["extra_body"]["foo"] == "bar"
+    assert "reasoning_split" not in body["extra_body"]
+    assert "reasoning_split" not in body["extra_body"]["chat_template_kwargs"]
+
+
+@pytest.mark.asyncio
+async def test_build_request_body_applies_glm_defaults(provider_config, monkeypatch):
+    """GLM defaults include seed and cap max_tokens when configured."""
+    monkeypatch.setenv("NVIDIA_NIM_MAX_TOKENS", "50")
+    monkeypatch.setenv("NVIDIA_NIM_SEED", "42")
+    provider = NvidiaNimProvider(provider_config)
+
+    req = MockRequest(max_tokens=100)
+    body = provider._build_request_body(req, stream=True)
+
+    assert body["max_tokens"] == 50
+    assert body["seed"] == 42
+
+
+@pytest.mark.asyncio
+async def test_build_request_body_converts_tool_choice(nim_provider):
+    """Anthropic tool_choice is forwarded in OpenAI-compatible format."""
+    req = MockRequest(tool_choice={"type": "tool", "name": "search"})
+    body = nim_provider._build_request_body(req, stream=True)
+
+    assert body["tool_choice"] == {
+        "type": "function",
+        "function": {"name": "search"},
+    }
 
 
 @pytest.mark.asyncio
@@ -123,6 +172,87 @@ async def test_stream_response_text(nim_provider):
                             text_content += data["delta"]["text"]
 
         assert "Hello World" in text_content
+
+
+@pytest.mark.asyncio
+async def test_stream_response_rotates_after_410(provider_config, monkeypatch):
+    """A retired model should be skipped instead of ending the stream."""
+    monkeypatch.setenv("MODEL", "retired-model")
+    provider = NvidiaNimProvider(provider_config, fallback_models=["active-model"])
+    req = MockRequest()
+
+    response = httpx.Response(
+        410,
+        request=httpx.Request("POST", "https://test.api.nvidia.com/v1/chat/completions"),
+    )
+    retired_error = APIStatusError(
+        "model retired",
+        response=response,
+        body={"detail": "retired"},
+    )
+
+    mock_chunk = MagicMock()
+    mock_chunk.choices = [
+        MagicMock(
+            delta=MagicMock(content="Recovered", reasoning_content="", tool_calls=[]),
+            finish_reason="stop",
+        )
+    ]
+    mock_chunk.usage = MagicMock(completion_tokens=1)
+
+    async def mock_stream():
+        yield mock_chunk
+
+    with patch.object(
+        provider._client.chat.completions, "create", new_callable=AsyncMock
+    ) as mock_create:
+        mock_create.side_effect = [retired_error, mock_stream()]
+
+        events = []
+        async for event in provider.stream_response(req):
+            events.append(event)
+
+        assert mock_create.call_count == 2
+        assert mock_create.call_args.kwargs["model"] == "active-model"
+        assert any("Recovered" in event for event in events)
+        assert not any("Switching to model" in event for event in events)
+        assert sum("event: message_start" in event for event in events) == 1
+
+
+@pytest.mark.asyncio
+async def test_stream_response_exhausted_models_finishes_sse(provider_config, monkeypatch):
+    """Final provider errors should still close the Anthropic SSE stream."""
+    monkeypatch.setenv("MODEL", "retired-model")
+    provider = NvidiaNimProvider(provider_config)
+    req = MockRequest()
+
+    response = httpx.Response(
+        410,
+        request=httpx.Request("POST", "https://test.api.nvidia.com/v1/chat/completions"),
+    )
+    retired_error = APIStatusError(
+        "model retired",
+        response=response,
+        body={"detail": "retired"},
+    )
+
+    with patch.object(
+        provider._client.chat.completions,
+        "create",
+        new_callable=AsyncMock,
+    ) as mock_create:
+        mock_create.side_effect = retired_error
+
+        events = []
+        async for event in provider.stream_response(req):
+            events.append(event)
+
+        assert mock_create.call_count == 1
+        assert sum("event: message_start" in event for event in events) == 1
+        assert any("All models exhausted" in event for event in events)
+        assert any("event: message_delta" in event for event in events)
+        assert any("event: message_stop" in event for event in events)
+        assert events[-1] == "[DONE]\n\n"
 
 
 @pytest.mark.asyncio

@@ -34,6 +34,14 @@ class ModelStatus:
             f"Model {self.model_name} rate limited until {self.rate_limited_until.strftime('%H:%M:%S')}"
         )
 
+    def mark_unavailable(self, cooldown_seconds: int = 86400):
+        """标记模型不可用，例如 404/410 下线或未发布。"""
+        self.rate_limited_until = datetime.now() + timedelta(seconds=cooldown_seconds)
+        self.fail_count += 1
+        logger.warning(
+            f"Model {self.model_name} unavailable until {self.rate_limited_until.strftime('%H:%M:%S')}"
+        )
+
     def mark_success(self):
         """标记模型请求成功。"""
         self.last_success = datetime.now()
@@ -51,14 +59,17 @@ class ModelRotator:
     """
 
     def __init__(self, fallback_models: List[str]):
-        self.fallback_models = fallback_models
+        self.fallback_models = list(dict.fromkeys(fallback_models))
         self.model_status = {
-            model: ModelStatus(model) for model in fallback_models
+            model: ModelStatus(model) for model in self.fallback_models
         }
         self.current_index = 0  # 当前使用的模型索引
 
     def get_available_model(self) -> Optional[str]:
         """获取当前可用的最佳模型。"""
+        if not self.fallback_models:
+            return None
+
         # 优先检查当前索引的模型
         if self.model_status[self.fallback_models[self.current_index]].is_available():
             return self.fallback_models[self.current_index]
@@ -90,6 +101,14 @@ class ModelRotator:
             self.model_status[model].mark_ratelimited(cooldown)
             logger.info(
                 f"模型 {model} 被限速，可用模型: {self.get_all_available()}"
+            )
+
+    def handle_unavailable(self, model: str, cooldown: int = 86400):
+        """处理模型不可用。"""
+        if model in self.model_status:
+            self.model_status[model].mark_unavailable(cooldown)
+            logger.info(
+                f"模型 {model} 不可用，可用模型: {self.get_all_available()}"
             )
 
     def handle_success(self, model: str):

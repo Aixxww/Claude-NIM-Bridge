@@ -25,7 +25,7 @@ def strip_provider_prefixes(model: str) -> str:
         Model name without provider prefix
     """
     if not model:
-        return "moonshotai/kimi-k2-thinking"
+        return "moonshotai/kimi-k2.6"
 
     for prefix in _PROVIDER_PREFIXES:
         if model.startswith(prefix):
@@ -73,7 +73,7 @@ def normalize_model_name(model: str, default_model: Optional[str] = None) -> str
     if is_claude_model(clean):
         if default_model is None:
             # Use environment/config default
-            default_model = os.getenv("MODEL", "moonshotai/kimi-k2-thinking")
+            default_model = os.getenv("MODEL", "moonshotai/kimi-k2.6")
         return default_model
 
     return model

@@ -28,6 +28,10 @@ class AnthropicToOpenAIConverter:
 
         for msg in messages:
             role = msg.role
+
+            # Skip system role messages - they should be handled via system parameter
+            if role == "system":
+                continue
             content = msg.content
             reasoning_content = getattr(msg, "reasoning_content", None)
 
@@ -166,6 +170,27 @@ class AnthropicToOpenAIConverter:
             }
             for tool in tools
         ]
+
+    @staticmethod
+    def convert_tool_choice(tool_choice: Optional[Dict[str, Any]]) -> Any:
+        """Convert Anthropic tool_choice to OpenAI format."""
+        if not tool_choice:
+            return None
+
+        choice_type = tool_choice.get("type")
+        if choice_type == "auto":
+            return "auto"
+        if choice_type == "none":
+            return "none"
+        if choice_type == "any":
+            return "required"
+        if choice_type == "tool" and tool_choice.get("name"):
+            return {
+                "type": "function",
+                "function": {"name": tool_choice["name"]},
+            }
+
+        return None
 
     @staticmethod
     def convert_system_prompt(system: Any) -> Optional[Dict[str, str]]:

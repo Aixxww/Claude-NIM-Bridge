@@ -59,7 +59,10 @@
         <string>YOUR_NVIDIA_NIM_API_KEY</string>
 
         <key>MODEL</key>
-        <string>moonshotai/kimi-k2-thinking</string>
+        <string>z-ai/glm-5.2</string>
+
+        <key>MODEL_FALLBACK</key>
+        <string>minimaxai/minimax-m3,deepseek-ai/deepseek-v4-flash,deepseek-ai/deepseek-v4-pro,qwen/qwen3.5-122b-a10b,qwen/qwen3.5-397b-a17b,mistralai/mistral-large-3-675b-instruct-2512,openai/gpt-oss-120b</string>
 
         <!-- Rate limiting -->
         <key>NVIDIA_NIM_RATE_LIMIT</key>

@@ -1,9 +1,10 @@
 """Centralized configuration using Pydantic Settings."""
 
+import json
 from functools import lru_cache
-from typing import Optional, Literal
+from typing import Annotated, Optional, Literal
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,17 +34,15 @@ class Settings(BaseSettings):
     # ==================== Model ====================
     # 支持多模型轮转以突破单模型速率限制
     # 优先级从高到低：主模型 → 备用1 → 备用2...
-    model: str = "z-ai/glm4.7"
-    model_fallback: list = [
-        # 主备选 (深度思考类)
-        "z-ai/glm5",
-        "qwen/qwq-32b",
-        # 大模型备选
-        "meta/llama-3.1-405b-instruct",
+    model: str = "moonshotai/kimi-k2.6"
+    model_fallback: Annotated[list[str], NoDecode] = [
+        "minimaxai/minimax-m3",
+        "deepseek-ai/deepseek-v4-flash",
+        "deepseek-ai/deepseek-v4-pro",
         "qwen/qwen3.5-122b-a10b",
-        # 通用备选
-        "deepseek-ai/deepseek-v3.2",
+        "qwen/qwen3.5-397b-a17b",
         "mistralai/mistral-large-3-675b-instruct-2512",
+        "openai/gpt-oss-120b",
     ]
 
     # ==================== Rate Limiting ====================
@@ -64,14 +63,14 @@ class Settings(BaseSettings):
     nvidia_nim_temperature: float = 1.0
     nvidia_nim_top_p: float = 1.0
     nvidia_nim_top_k: int = -1
-    nvidia_nim_max_tokens: int = 81920
+    nvidia_nim_max_tokens: int = 16384
     nvidia_nim_presence_penalty: float = 0.0
     nvidia_nim_frequency_penalty: float = 0.0
 
     # ==================== NIM Advanced Parameters ====================
     nvidia_nim_min_p: float = 0.0
     nvidia_nim_repetition_penalty: float = 1.0
-    nvidia_nim_seed: Optional[int] = None
+    nvidia_nim_seed: Optional[int] = 42
     nvidia_nim_stop: Optional[str] = None
 
     # ==================== NIM Flag Parameters ====================
@@ -106,6 +105,22 @@ class Settings(BaseSettings):
     def parse_optional_str(cls, v):
         if v == "":
             return None
+        return v
+
+    @field_validator("model_fallback", mode="before")
+    @classmethod
+    def parse_model_fallback(cls, v):
+        """Accept JSON lists or comma-separated MODEL_FALLBACK values."""
+        if v is None or v == "":
+            return []
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
+            return [model.strip() for model in v.split(",") if model.strip()]
         return v
 
     model_config = SettingsConfigDict(

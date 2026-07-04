@@ -52,6 +52,8 @@ class RequestBuilderMixin:
             params["top_p"] = float(val)
         if val := os.getenv("NVIDIA_NIM_MAX_TOKENS"):
             params["max_tokens"] = int(val)
+        if val := os.getenv("NVIDIA_NIM_SEED"):
+            params["seed"] = int(val)
         return params
 
     def _build_request_body(self, request_data: Any, stream: bool = False) -> dict:
@@ -88,20 +90,19 @@ class RequestBuilderMixin:
             body["stop"] = request_data.stop_sequences
         if request_data.tools:
             body["tools"] = AnthropicToOpenAIConverter.convert_tools(request_data.tools)
+        tool_choice = AnthropicToOpenAIConverter.convert_tool_choice(
+            getattr(request_data, "tool_choice", None)
+        )
+        if tool_choice is not None:
+            body["tool_choice"] = tool_choice
 
-        # Handle non-standard parameters via extra_body
+        # Handle non-standard parameters via extra_body. NVIDIA rejects
+        # reasoning_split, so do not forward it even if a client sends it.
         extra_body = getattr(request_data, "extra_body", None)
         extra_body_params = extra_body.copy() if extra_body else {}
-
-        # Handle thinking/reasoning mode
-        # Put thinking parameters in extra_body for non-standard NIM parameters
-        if request_data.thinking and getattr(request_data.thinking, "enabled", True):
-            extra_body_params.setdefault("thinking", {"type": "enabled"})
-            extra_body_params.setdefault("reasoning_split", True)
-            extra_body_params.setdefault(
-                "chat_template_kwargs",
-                {"thinking": True, "reasoning_split": True, "clear_thinking": False},
-            )
+        extra_body_params.pop("reasoning_split", None)
+        if isinstance(extra_body_params.get("chat_template_kwargs"), dict):
+            extra_body_params["chat_template_kwargs"].pop("reasoning_split", None)
 
         # Pass extra_body_params to OpenAI client as extra_body
         if extra_body_params:
@@ -109,7 +110,9 @@ class RequestBuilderMixin:
 
         # Apply NIM defaults (only if not already set)
         for key, val in self._nim_params.items():
-            if key not in body:
+            if key == "max_tokens":
+                body[key] = min(body[key], val)
+            elif key not in body:
                 body[key] = val
 
         return body

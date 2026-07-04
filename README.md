@@ -71,7 +71,8 @@ PROVIDER=nvidia_nim          # "nvidia_nim" (default) or "mimo"
 
 # --- NVIDIA NIM ---
 NVIDIA_NIM_API_KEY=nvapi-your-key-here
-MODEL=moonshotai/kimi-k2-thinking
+MODEL=z-ai/glm-5.2
+MODEL_FALLBACK=minimaxai/minimax-m3,deepseek-ai/deepseek-v4-flash,deepseek-ai/deepseek-v4-pro,qwen/qwen3.5-122b-a10b,qwen/qwen3.5-397b-a17b,mistralai/mistral-large-3-675b-instruct-2512,openai/gpt-oss-120b
 
 # --- Xiaomi MiMo (if using mimo provider) ---
 # PROVIDER=mimo
@@ -115,7 +116,8 @@ The primary provider using NVIDIA's free NIM API. Supports 100+ models including
 ```env
 PROVIDER=nvidia_nim
 NVIDIA_NIM_API_KEY=nvapi-xxx
-MODEL=moonshotai/kimi-k2-thinking
+MODEL=z-ai/glm-5.2
+MODEL_FALLBACK=minimaxai/minimax-m3,deepseek-ai/deepseek-v4-flash,deepseek-ai/deepseek-v4-pro,qwen/qwen3.5-122b-a10b,qwen/qwen3.5-397b-a17b,mistralai/mistral-large-3-675b-instruct-2512,openai/gpt-oss-120b
 ```
 
 ### Xiaomi MiMo
@@ -135,8 +137,8 @@ MIMO_MODEL=mimo-v2.5-pro
 When a model hits its rate limit (HTTP 429), the bridge automatically rotates to the next available model. Configure fallback models:
 
 ```env
-MODEL=moonshotai/kimi-k2-thinking
-MODEL_FALLBACK=moonshotai/kimi-k2.5,z-ai/glm4.7,minimaxai/minimax-m2.1
+MODEL=z-ai/glm-5.2
+MODEL_FALLBACK=minimaxai/minimax-m3,deepseek-ai/deepseek-v4-flash,deepseek-ai/deepseek-v4-pro,qwen/qwen3.5-122b-a10b,qwen/qwen3.5-397b-a17b,mistralai/mistral-large-3-675b-instruct-2512,openai/gpt-oss-120b
 ```
 
 Rotation order: Primary MODEL -> FALLBACK[0] -> FALLBACK[1] -> ... -> back to primary.
@@ -178,10 +180,14 @@ View full list: [build.nvidia.com/explore/discover](https://build.nvidia.com/exp
 
 | Model ID | Type | Description |
 |----------|------|-------------|
-| `moonshotai/kimi-k2-thinking` | Reasoning | Strong reasoning, default choice |
-| `moonshotai/kimi-k2.5` | General | Balanced performance |
-| `z-ai/glm4.7` | Chinese | Optimized for Chinese content |
-| `minimaxai/minimax-m2.1` | Efficient | Fast response for simple tasks |
+| `z-ai/glm-5.2` | Primary | Current Z.ai model available in NVIDIA NIM |
+| `minimaxai/minimax-m3` | Fallback | Strong general agent/coding fallback |
+| `deepseek-ai/deepseek-v4-flash` | Fallback | Fast fallback for frequent requests |
+| `deepseek-ai/deepseek-v4-pro` | Fallback | Higher-quality DeepSeek fallback |
+| `qwen/qwen3.5-122b-a10b` | Fallback | Strong Chinese/code fallback |
+| `qwen/qwen3.5-397b-a17b` | Fallback | Larger Qwen fallback |
+| `mistralai/mistral-large-3-675b-instruct-2512` | Fallback | Strong general instruction model |
+| `openai/gpt-oss-120b` | Fallback | Final broad-coverage fallback |
 
 Refresh model cache:
 
@@ -207,8 +213,8 @@ curl "https://integrate.api.nvidia.com/v1/models" -H "Authorization: Bearer $NVI
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `PROVIDER` | Backend provider (`nvidia_nim` or `mimo`) | `nvidia_nim` |
-| `MODEL` | Primary model ID | `moonshotai/kimi-k2-thinking` |
-| `MODEL_FALLBACK` | Comma-separated fallback models | *(empty)* |
+| `MODEL` | Primary model ID | `z-ai/glm-5.2` |
+| `MODEL_FALLBACK` | Comma-separated fallback models | `minimaxai/minimax-m3,...` |
 | `NVIDIA_NIM_API_KEY` | NVIDIA API key | *(required for nvidia_nim)* |
 | `MIMO_API_KEY` | MiMo API key | *(required for mimo)* |
 | `MIMO_MODEL` | MiMo model ID | `mimo-v2.5-pro` |
@@ -217,8 +223,8 @@ curl "https://integrate.api.nvidia.com/v1/models" -H "Authorization: Bearer $NVI
 | `FAST_PREFIX_DETECTION` | Enable prefix detection | `true` |
 | `ENABLE_NETWORK_PROBE_MOCK` | Enable network probe mock | `true` |
 | `ENABLE_TITLE_GENERATION_SKIP` | Skip title generation requests | `true` |
-| `NVIDIA_NIM_MAX_TOKENS` | Max output tokens | `81920` |
-| `NVIDIA_NIM_REASONING_EFFORT` | Reasoning effort level | `high` |
+| `NVIDIA_NIM_MAX_TOKENS` | Max output tokens cap | `16384` |
+| `NVIDIA_NIM_SEED` | Deterministic seed passed to NVIDIA NIM | `42` |
 
 See `.env.example` for full configuration reference.
 
@@ -302,7 +308,7 @@ lsof -i :8082
 The bridge auto-rotates models. If all models are rate-limited, add more fallbacks:
 
 ```env
-MODEL_FALLBACK=moonshotai/kimi-k2.5,z-ai/glm4.7,minimaxai/minimax-m2.1,nvidia/nemotron-3-8b-chat
+MODEL_FALLBACK=minimaxai/minimax-m3,deepseek-ai/deepseek-v4-flash,deepseek-ai/deepseek-v4-pro,qwen/qwen3.5-122b-a10b,qwen/qwen3.5-397b-a17b,mistralai/mistral-large-3-675b-instruct-2512,openai/gpt-oss-120b
 ```
 
 ### Request Failed
